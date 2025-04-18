@@ -22,12 +22,10 @@ public class PluginInitializer {
         managers = ReflectionUtils.initializeClasses(plugin, packageName, ManagerBase.class);
         commands = ReflectionUtils.initializeClasses(plugin, packageName, CommandBase.class);
         listeners = ReflectionUtils.initializeClasses(plugin, packageName, ListenerBase.class);
-
         managers.forEach(m -> m.init(plugin));
+        assignManagersToPluginFields();
         commands.forEach(c -> c.register(plugin));
         listeners.forEach(l -> l.register(plugin));
-
-        assignManagersToPluginFields();
     }
 
     public void shutdown() {

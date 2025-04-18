@@ -8,6 +8,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import java.lang.reflect.Method;
+
 public class MessageUtils {
     public static String formatEnumName(String enumName) {
         String[] parts = enumName.toLowerCase().split("_");
@@ -52,45 +54,37 @@ public class MessageUtils {
         title = ChatColor.translateAlternateColorCodes('&', title);
         subtitle = ChatColor.translateAlternateColorCodes('&', subtitle);
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            player.sendTitle(title, subtitle, 10, 60, 10); // Fade in: 0.5s, Stay: 3s, Fade out: 0.5s
+            player.sendTitle(title, subtitle, 10, 60, 10);
         }
     }
 
     private static String replacePlaceholders(String message, Object... args) {
         if (args.length == 0) return message;
-        if (args[0] instanceof Quest quest) {
-            message = message.replace("{quest}", quest.getObjective())
-                    .replace("{amount}", String.valueOf(quest.getAmount()));
-            if (args.length > 1 && args[1] instanceof Integer progress) {
-                message = message.replace("{progress}", String.valueOf(progress));
+
+        if (args[0] != null) {
+            try {
+                Class<?> questClass = args[0].getClass();
+                Method getObjective = questClass.getMethod("getObjective");
+                Method getAmount = questClass.getMethod("getAmount");
+                String objective = (String) getObjective.invoke(args[0]);
+                Integer amount = (Integer) getAmount.invoke(args[0]);
+                message = message.replace("{quest}", objective)
+                        .replace("{amount}", String.valueOf(amount));
+            } catch (NoSuchMethodException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
             }
-            if (args.length > 1 && args[1] instanceof Player player) {
-                message = message.replace("{player}", player.getName());
-            }
-        } else if (args[0] instanceof Player player) {
+        }
+
+        if (args[0] instanceof Player player) {
+            message = message.replace("{player}", player.getName());
+        } else if (args.length > 1 && args[1] instanceof Player player) {
             message = message.replace("{player}", player.getName());
         }
-        if (args.length > 1 && args[1] instanceof Integer time) {
-            message = message.replace("{time}", String.valueOf(time));
+
+        if (args.length > 1 && args[1] instanceof Integer value) {
+            message = message.replace("{progress}", String.valueOf(value))
+                    .replace("{time}", String.valueOf(value));
         }
+
         return message;
-    }
-
-    public static class Quest {
-        private final String objective;
-        private final int amount;
-
-        public Quest(String objective, int amount) {
-            this.objective = objective;
-            this.amount = amount;
-        }
-
-        public String getObjective() {
-            return objective;
-        }
-
-        public int getAmount() {
-            return amount;
-        }
     }
 }
