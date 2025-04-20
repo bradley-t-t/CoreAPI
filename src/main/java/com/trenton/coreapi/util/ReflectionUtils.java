@@ -7,24 +7,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReflectionUtils {
-    public static <T> List<T> initializeClasses(Plugin plugin, String packageName, Class<T> interfaceClass) {
-        List<T> instances = new ArrayList<>();
+    public static List<Class<?>> scanClasses(Plugin plugin, String packageName) {
+        List<Class<?>> classes = new ArrayList<>();
         try {
             ClassPath classPath = ClassPath.from(plugin.getClass().getClassLoader());
             for (ClassPath.ClassInfo info : classPath.getTopLevelClassesRecursive(packageName)) {
                 Class<?> clazz = info.load();
-                if (interfaceClass.isAssignableFrom(clazz) && !clazz.isInterface() && !clazz.isEnum()) {
-                    try {
-                        T instance = (T) clazz.getDeclaredConstructor().newInstance();
-                        instances.add(instance);
-                    } catch (Exception e) {
-                        plugin.getLogger().warning("Failed to instantiate " + clazz.getSimpleName() + ": " + e.getMessage());
-                    }
+                if (!clazz.isInterface() && !clazz.isEnum()) {
+                    classes.add(clazz);
                 }
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to scan classes: " + e.getMessage());
         }
-        return instances;
+        return classes;
     }
 }

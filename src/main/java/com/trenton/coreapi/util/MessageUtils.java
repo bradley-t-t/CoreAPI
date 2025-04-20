@@ -8,7 +8,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MessageUtils {
     public static String formatEnumName(String enumName) {
@@ -21,7 +24,7 @@ public class MessageUtils {
         return formatted.toString();
     }
 
-    public static void sendMessage(Plugin plugin, FileConfiguration messages, CommandSender sender, String key, Object... args) {
+    public static void sendMessage(FileConfiguration messages, CommandSender sender, String key, Object... args) {
         String message = messages.getString(key, "");
         if (message.isEmpty()) return;
         message = replacePlaceholders(message, args);
@@ -29,7 +32,7 @@ public class MessageUtils {
         sender.sendMessage(message);
     }
 
-    public static void sendActionBar(Plugin plugin, FileConfiguration messages, Player player, String key, Object... args) {
+    public static void sendActionBar(FileConfiguration messages, Player player, String key, Object... args) {
         String message = messages.getString(key, "");
         if (message.isEmpty()) return;
         message = replacePlaceholders(message, args);
@@ -59,32 +62,20 @@ public class MessageUtils {
     }
 
     private static String replacePlaceholders(String message, Object... args) {
-        if (args.length == 0) return message;
-
-        if (args[0] != null) {
-            try {
-                Class<?> questClass = args[0].getClass();
-                Method getObjective = questClass.getMethod("getObjective");
-                Method getAmount = questClass.getMethod("getAmount");
-                String objective = (String) getObjective.invoke(args[0]);
-                Integer amount = (Integer) getAmount.invoke(args[0]);
-                message = message.replace("{quest}", objective)
-                        .replace("{amount}", String.valueOf(amount));
-            } catch (NoSuchMethodException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
-            }
+        List<String> placeholders = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
+        Matcher matcher = pattern.matcher(message);
+        while (matcher.find()) {
+            placeholders.add(matcher.group(0));
         }
 
-        if (args[0] instanceof Player player) {
-            message = message.replace("{player}", player.getName());
-        } else if (args.length > 1 && args[1] instanceof Player player) {
-            message = message.replace("{player}", player.getName());
+        String result = message;
+        for (int i = 0; i < placeholders.size() && i < args.length; i++) {
+            String placeholder = placeholders.get(i);
+            String replacement = args[i] != null ? args[i].toString() : "";
+            result = result.replace(placeholder, replacement);
         }
 
-        if (args.length > 1 && args[1] instanceof Integer value) {
-            message = message.replace("{progress}", String.valueOf(value))
-                    .replace("{time}", String.valueOf(value));
-        }
-
-        return message;
+        return result;
     }
 }
